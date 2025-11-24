@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using PatientTestManagerWinApp.ApplicationLayer.Dtos.Request;
 using PatientTestManagerWinApp.ApplicationLayer.Dtos.Request.Tests;
 using PatientTestManagerWinApp.ApplicationLayer.Dtos.Response.Tests;
 using PatientTestManagerWinApp.ApplicationLayer.Models;
@@ -65,6 +64,10 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                 // logging
                 return Result<TestDto>.Fail("Creating new test failed");
             }
+            finally
+            {
+                _unitOfWork.ClearTracker();
+            }
         }
 
         public async Task<Result<bool>> DeleteAsync(int id)
@@ -81,14 +84,16 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                 // logging
                 return Result<bool>.Fail("Deleting test failed");
             }
+            finally
+            {
+                _unitOfWork.ClearTracker();
+            }
         }
 
-        public async Task<PagedResult<TestDto>> GetAsync(GetTestsRequest request)
+        public async Task<Result<List<TestDto>>> GetAsync(GetTestsRequest request)
         {
             try
             {
-                int testsCount = 0;
-
                 var testsQuery = _testsRepository.AsQueryable()
                     .Where(e => e.PatientID == request.PatientID);
 
@@ -97,18 +102,12 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                     testsQuery = testsQuery.Where(e => e.PerformedOn >= request.PerformedOnFrom);
                 }
 
-                if (request.PerformedOnTo is not null)
+                if (request.PerformedOnToExcluded is not null)
                 {
-                    testsQuery = testsQuery.Where(e => e.PerformedOn <= request.PerformedOnTo);
+                    testsQuery = testsQuery.Where(e => e.PerformedOn < request.PerformedOnToExcluded);
                 }
 
-                if (request.IncludePagination is true)
-                {
-                    testsCount = await testsQuery.CountAsync();
-                    testsQuery = testsQuery
-                        .Skip((request.PageNumber - 1) * request.PageSize)
-                        .Take(request.PageSize);
-                }
+                testsQuery = testsQuery.OrderBy(e => e.PerformedOn);
 
                 var testList = await testsQuery.ToListAsync();
 
@@ -130,12 +129,16 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                     testDtoList.Add(testDto);
                 }
 
-                return PagedResult<TestDto>.Ok(testDtoList, request.PageNumber, request.PageSize, testsCount);
+                return Result<List<TestDto>>.Ok(testDtoList);
             }
             catch (Exception ex)
             {
                 // logging
-                return PagedResult<TestDto>.Fail("Fetching tests info failed");
+                return Result<List<TestDto>>.Fail("Fetching tests info failed");
+            }
+            finally
+            {
+                _unitOfWork.ClearTracker();
             }
         }
 
@@ -143,7 +146,6 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
         {
             try
             {
-
                 var test = await _testsRepository.GetAsync(request.ID);
 
                 if (test is null)
@@ -177,6 +179,10 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
             {
                 // logging
                 return Result<TestDto>.Fail("Updating test failed");
+            }
+            finally
+            {
+                _unitOfWork.ClearTracker();
             }
         }
     }

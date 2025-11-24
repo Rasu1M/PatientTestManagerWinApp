@@ -10,5 +10,6 @@ namespace PatientTestManagerWinApp.infrastructure.Persistence.Repository
     {
         int SaveChanges();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken);
+        void ClearTracker();
     }
 }

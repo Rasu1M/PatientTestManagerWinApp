@@ -24,7 +24,7 @@ namespace PatientTestManagerWinApp.infrastructure.Persistence
         {
             var optionsBuilder = new DbContextOptionsBuilder<PatientTestManagerDBContext>();
 
-            var dbPath = Path.Combine(AppContext.BaseDirectory, "Data Source=PatientTestManager.db");
+            var dbPath = Path.Combine(AppContext.BaseDirectory, "PatientTestManager.db");
             optionsBuilder.UseSqlite($"Data Source={dbPath}");
 
             return new PatientTestManagerDBContext(optionsBuilder.Options);

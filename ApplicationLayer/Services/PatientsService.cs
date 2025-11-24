@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using PatientTestManagerWinApp.ApplicationLayer.Dtos.Request.Patients;
 using PatientTestManagerWinApp.ApplicationLayer.Dtos.Response.Patients;
 using PatientTestManagerWinApp.ApplicationLayer.Models;
@@ -50,6 +51,10 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                 // logging
                 return Result<PatientDto>.Fail("Creating new patient failed");
             }
+            finally
+            {
+                _unitOfWork.ClearTracker();
+            }
         }
 
         public async Task<Result<bool>> DeleteAsync(int id)
@@ -66,24 +71,19 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                 // logging
                 return Result<bool>.Fail("Deleting patient failed");
             }
+            finally
+            {
+                _unitOfWork.ClearTracker();
+            }
         }
 
-        public async Task<PagedResult<PatientDto>> GetAsync(GetPatientsRequest request)
+        public async Task<Result<List<PatientDto>>> GetAsync(GetPatientsRequest request)
         {
             try
             {
-                int patientsCount = 0;
-
-                var patientQuery = _patientsRepository.AsQueryable();
-
-                if (request.IncludePagination is true)
-                {
-                    patientsCount = await patientQuery.CountAsync();
-
-                    patientQuery = patientQuery
-                        .Skip((request.PageNumber - 1) * request.PageSize)
-                        .Take(request.PageSize);
-                }
+                var patientQuery = _patientsRepository
+                    .AsQueryable()
+                    .OrderBy(e => e.CreatedAt);
 
                 var patientList = await patientQuery.ToListAsync();
 
@@ -102,12 +102,16 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
                     patientDtoList.Add(patientDto);
                 }
 
-                return PagedResult<PatientDto>.Ok(patientDtoList, request.PageNumber, request.PageSize, patientsCount);
+                return Result<List<PatientDto>>.Ok(patientDtoList);
             }
             catch (Exception ex)
             {
                 // logging
-                return PagedResult<PatientDto>.Fail("Fetching patients info failed");
+                return Result<List<PatientDto>>.Fail("Fetching patients info failed");
+            }
+            finally
+            {
+                _unitOfWork.ClearTracker();
             }
         }
 
@@ -146,6 +150,69 @@ namespace PatientTestManagerWinApp.ApplicationLayer.Services
             {
                 // logging
                 return Result<PatientDto>.Fail("Updating patient failed");
+            }
+            finally
+            {
+                _unitOfWork.ClearTracker();
+            }
+        }
+
+        public async Task<Result<List<ReportDto>>> GetReport(GetReportRequest request)
+        {
+            try
+            {
+                string connectionString = $"Data Source={Path.Combine(AppContext.BaseDirectory, "PatientTestManager.db")}";
+
+                string sqlQuery = @"
+                                SELECT 
+                                    p.Name AS PatientName,
+                                    p.DateOfBirth,
+                                    p.Gender,
+                                    COUNT(t.ID) AS TotalTests,
+                                    COALESCE(
+                                                AVG(CASE WHEN t.IsWithinThreshold = 1 THEN 1.0 ELSE 0 END) * 100,
+                                                0
+                                            ) AS TestsWithinThresholdPercentage
+                                FROM Patients p
+                                LEFT JOIN Tests t ON p.ID = t.PatientID
+                                AND t.PerformedOn >= @PerformedOnFrom
+                                AND t.PerformedOn < @PerformedOnToExcluded
+                                GROUP BY p.ID, p.Name, p.DateOfBirth, p.Gender, p.CreatedAt
+                                ORDER BY p.CreatedAt
+                                ";
+
+                var results = new List<ReportDto>();
+
+                using (var conn = new SqliteConnection(connectionString))
+                using (var cmd = new SqliteCommand(sqlQuery, conn))
+                {
+                    await conn.OpenAsync();
+
+                    cmd.Parameters.AddWithValue("@PerformedOnFrom", request.PerformedOnFrom);
+                    cmd.Parameters.AddWithValue("@PerformedOnToExcluded", request.PerformedOnToExcluded);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            results.Add(new ReportDto
+                            {
+                                Name = reader["PatientName"].ToString()!,
+                                DateOfBirth = reader.GetDateTime(reader.GetOrdinal("DateOfBirth")),
+                                Gender = reader["Gender"].ToString()!,
+                                TestCount = reader.GetInt32(reader.GetOrdinal("TotalTests")),
+                                TestsWithinThresholdPercentage = reader.GetDecimal(reader.GetOrdinal("TestsWithinThresholdPercentage")).ToString("F2")
+                            });
+                        }
+                    }
+                }
+
+                return Result<List<ReportDto>>.Ok(results);
+            }
+            catch (Exception ex)
+            {
+                // logging
+                return Result<List<ReportDto>>.Fail("Preparing report data failed");
             }
         }
     }

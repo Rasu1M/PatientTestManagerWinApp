@@ -1,4 +1,6 @@
 ﻿
+using PatientTestManagerWinApp.ApplicationLayer.Models;
+
 namespace PatientTestManagerWinApp.infrastructure.Persistence.Repository
 {
     public class UnitOfWork : IUnitOfWork
@@ -7,6 +9,11 @@ namespace PatientTestManagerWinApp.infrastructure.Persistence.Repository
         public UnitOfWork(PatientTestManagerDBContext dbContext)
         {
             _dbContext = dbContext;
+        }
+
+        public void ClearTracker()
+        {
+            _dbContext.ChangeTracker.Clear();
         }
 
         public int SaveChanges()

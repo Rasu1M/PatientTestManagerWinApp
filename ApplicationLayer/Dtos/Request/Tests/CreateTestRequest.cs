@@ -1,4 +1,4 @@
-﻿namespace PatientTestManagerWinApp.ApplicationLayer.Dtos.Request
+﻿namespace PatientTestManagerWinApp.ApplicationLayer.Dtos.Request.Tests
 {
     public class CreateTestRequest
     {

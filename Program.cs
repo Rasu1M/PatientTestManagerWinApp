@@ -4,6 +4,7 @@ using PatientTestManagerWinApp.ApplicationLayer.Services;
 using PatientTestManagerWinApp.ApplicationLayer.Services.Abstract;
 using PatientTestManagerWinApp.infrastructure.Persistence;
 using PatientTestManagerWinApp.infrastructure.Persistence.Repository;
+using PatientTestManagerWinApp.Presentation;
 
 namespace PatientTestManagerWinApp
 {
@@ -27,18 +28,20 @@ namespace PatientTestManagerWinApp
         }
         private static void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<PatientTestManagerDBContext>(options =>
-            {
-                var dbPath = Path.Combine(AppContext.BaseDirectory, "Data Source=PatientTestManager.db");
-                options.UseSqlite($"Data Source={dbPath}");
-            });
+            services.AddTransient<MainPage>();
+            services.AddTransient<TestPage>();
+            services.AddTransient<ReportPage>();
 
             services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddScoped<ITestsService, TestsService>();
             services.AddScoped<IPatientsService, PatientsService>();
 
-            services.AddTransient<MainPage>();
+            services.AddDbContext<PatientTestManagerDBContext>(options =>
+            {
+                var dbPath = Path.Combine(AppContext.BaseDirectory, "PatientTestManager.db");
+                options.UseSqlite($"Data Source={dbPath}");
+            });
         }
     }
 }

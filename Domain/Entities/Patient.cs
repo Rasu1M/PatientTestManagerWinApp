@@ -8,5 +8,7 @@ namespace PatientTestManagerWinApp.Domain.Entities
         public DateTime DateOfBirth { get; set; }
         public string Gender { get; set; } = string.Empty;
         public DateTime? UpdatedAt { get; set; }
+
+        public ICollection<Test>? Tests { get; set; }
     }
 }

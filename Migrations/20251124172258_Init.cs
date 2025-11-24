@@ -45,17 +45,28 @@ namespace PatientTestManagerWinApp.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tests", x => x.ID);
+                    table.ForeignKey(
+                        name: "FK_Tests_Patients_PatientID",
+                        column: x => x.PatientID,
+                        principalTable: "Patients",
+                        principalColumn: "ID",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tests_PatientID",
+                table: "Tests",
+                column: "PatientID");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Patients");
+                name: "Tests");
 
             migrationBuilder.DropTable(
-                name: "Tests");
+                name: "Patients");
         }
     }
 }

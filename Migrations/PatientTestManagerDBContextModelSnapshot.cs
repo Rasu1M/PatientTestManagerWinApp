@@ -75,7 +75,25 @@ namespace PatientTestManagerWinApp.Migrations
 
                     b.HasKey("ID");
 
+                    b.HasIndex("PatientID");
+
                     b.ToTable("Tests");
+                });
+
+            modelBuilder.Entity("PatientTestManagerWinApp.Domain.Entities.Test", b =>
+                {
+                    b.HasOne("PatientTestManagerWinApp.Domain.Entities.Patient", "Patient")
+                        .WithMany("Tests")
+                        .HasForeignKey("PatientID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("PatientTestManagerWinApp.Domain.Entities.Patient", b =>
+                {
+                    b.Navigation("Tests");
                 });
 #pragma warning restore 612, 618
         }

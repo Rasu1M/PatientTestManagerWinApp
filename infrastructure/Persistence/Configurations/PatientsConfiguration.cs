@@ -27,6 +27,12 @@ namespace PatientTestManagerWinApp.infrastructure.Persistence.Configurations
             builder.Property(e => e.UpdatedAt)
                 .HasColumnType("datetime2(0)")
                 .IsRequired(false);
+
+            builder.HasMany(e => e.Tests)
+                .WithOne(e => e.Patient)
+                .HasForeignKey(e => e.PatientID)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }
